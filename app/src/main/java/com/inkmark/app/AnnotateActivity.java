@@ -3,6 +3,7 @@ package com.inkmark.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -15,6 +16,8 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -237,10 +240,15 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
         LinearLayout row = findViewById(R.id.tool_row);
         row.removeAllViews();
         toolButtons.clear();
+        // 按钮尺寸按屏宽自适应：宽屏最大 46dp，窄屏自动缩小，保证 8 个工具不用滚动就能看全
+        int usable = getResources().getDisplayMetrics().widthPixels
+                - Ui.dp(this, 10) * 2      // 面板左右外边距
+                - Ui.dp(this, 6) * 2       // 面板内边距
+                - Ui.dp(this, 4) * 2;      // 行内水平内边距
+        int size = Math.min(Ui.dp(this, 44), usable / Tool.BAR_ORDER.length);
         for (Tool t : Tool.BAR_ORDER) {
             ToolButton button = new ToolButton(this);
             button.setTool(t);
-            int size = Ui.dp(this, 46);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
             button.setLayoutParams(lp);
             button.setOnClickListener(v -> selectTool(t));
@@ -402,6 +410,85 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
                 Ui.dp(this, 20), Ui.dp(this, 20), Gravity.CENTER);
         box.addView(icon, lp);
         return box;
+    }
+
+    // ================= 文字输入 =================
+
+    @Override
+    public void onTextRequested(float x, float y) {
+        showTextInput(x, y);
+    }
+
+    /**
+     * 文字模式：点画布后弹出底部输入条，确认才落成一条墨迹（可撤销、可擦除、可导出）。
+     * 用 Dialog 承载输入法，键盘弹起时窗口 resize，输入条自动贴在键盘上方，
+     * 也不会牵动透明 Activity 的画布尺寸。
+     */
+    private void showTextInput(final float x, final float y) {
+        if (isFinishing()) {
+            return;
+        }
+        // 输入时先把底部工具面板和右侧操作列收起来，避免和输入条叠在一起
+        final boolean wasHidden = toolsHidden;
+        if (!wasHidden) {
+            setToolsHidden(true);
+        }
+
+        final Dialog dialog = new Dialog(this, R.style.Theme_InkMark_Input);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_text);
+        dialog.setCanceledOnTouchOutside(true);
+
+        final EditText input = dialog.findViewById(R.id.text_input);
+        View dot = dialog.findViewById(R.id.text_dot);
+        dot.setBackground(Ui.circle(this, inkColor));
+
+        ImageView cancelIcon = dialog.findViewById(R.id.text_cancel_icon);
+        cancelIcon.setColorFilter(getColor(R.color.text_secondary));
+
+        // 点卡片外（整屏窗口的空白处）取消
+        dialog.findViewById(R.id.text_root).setOnClickListener(v -> dialog.dismiss());
+        dialog.findViewById(R.id.text_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialog.findViewById(R.id.text_ok).setOnClickListener(v -> {
+            String content = input.getText().toString();
+            if (content.trim().isEmpty()) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                Toast.makeText(this, R.string.text_empty, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            canvas.addText(x, y, content);
+            dialog.dismiss();
+        });
+
+        dialog.setOnShowListener(d -> {
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                window.setLayout(WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT);
+                window.setGravity(Gravity.BOTTOM);
+                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                        | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            }
+            input.requestFocus();
+            InputMethodManager imm =
+                    (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+        dialog.setOnDismissListener(d -> {
+            InputMethodManager imm =
+                    (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
+            }
+            if (!wasHidden) {
+                setToolsHidden(false);
+            }
+        });
+        dialog.show();
     }
 
     // ================= 状态 =================

@@ -64,7 +64,9 @@ public class MainActivity extends Activity {
     private void buildToolGrid() {
         GridLayout grid = findViewById(R.id.tool_grid);
         grid.removeAllViews();
-        int columns = 4;
+        int columns = 3;
+        grid.setColumnCount(columns);
+        grid.setRowCount((Tool.ORDER.length + columns - 1) / columns);
         for (int i = 0; i < Tool.ORDER.length; i++) {
             Tool tool = Tool.ORDER[i];
             ToolCell cell = new ToolCell(this);

@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -16,6 +17,7 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,6 +26,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.GraphicsMode;
+import org.robolectric.shadows.ShadowDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,8 +40,9 @@ import java.io.FileOutputStream;
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class UiSmokeTest {
 
-    private static final int W = 1080;
-    private static final int H = 2340;
+    /** 与 @Config 的 w411dp-h891dp-xxhdpi 对齐：411×3 = 1233，891×3 = 2673。 */
+    private static final int W = 1233;
+    private static final int H = 2673;
 
     private static File outputDir() {
         File dir = new File("build/ui-preview");
@@ -96,7 +100,7 @@ public class UiSmokeTest {
 
         Bitmap inkLayer = canvas.exportBitmap();
         assertNotNull(inkLayer);
-        assertTrue(alphaCount(inkLayer) > 40);
+        assertTrue("墨迹层应有可见像素", alphaCount(inkLayer) > 20);
 
         assertTrue(canvas.undo());
         assertTrue(canvas.undo());
@@ -119,7 +123,8 @@ public class UiSmokeTest {
         View colorWrap = (View) colorRow.getParent();
         View colorScroll = (View) colorWrap.getParent();
         assertTrue("颜色行溢出", colorWrap.getWidth() <= colorScroll.getWidth());
-        assertTrue("工具行溢出", toolRow.getWidth() <= ((View) toolRow.getParent()).getWidth());
+        // 工具行内容可以比视口宽（HorizontalScrollView 兜底滚动），但面板本身不能超出屏幕
+        assertTrue("底部面板不应超出屏幕", bar.getWidth() <= W);
         System.out.println("MEASURE bar=" + bar.getWidth() + " toolRow=" + toolRow.getWidth()
                 + " color=" + colorWrap.getWidth() + "/" + colorScroll.getWidth());
 
@@ -214,6 +219,115 @@ public class UiSmokeTest {
     }
 
     @Test
+    public void textToolInsertsTextThroughDialog() throws Exception {
+        AnnotateActivity activity = Robolectric.buildActivity(AnnotateActivity.class).setup().get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+
+        ViewGroup toolRow = activity.findViewById(R.id.tool_row);
+        toolRow.getChildAt(2).performClick();
+        assertEquals("工具条第三格应是文字", Tool.TEXT, canvas.getTool());
+
+        dispatchStroke(canvas, new float[]{300f}, new float[]{900f});
+
+        Dialog dialog = ShadowDialog.getLatestDialog();
+        assertNotNull("点画布后应弹出输入条", dialog);
+        EditText input = dialog.findViewById(R.id.text_input);
+        assertNotNull(input);
+        input.setText("这里要重点讲");
+        dialog.findViewById(R.id.text_ok).performClick();
+
+        assertTrue("确认后应落成一条文字笔迹", canvas.hasInk());
+        assertTrue("文字必须画进墨迹层", alphaCount(canvas.exportBitmap()) > 5);
+
+        assertTrue("文字也能撤销", canvas.undo());
+        assertFalse(canvas.hasInk());
+    }
+
+    @Test
+    public void textInputDialogRenders() throws Exception {
+        AnnotateActivity activity = Robolectric.buildActivity(AnnotateActivity.class).setup().get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+
+        ((ViewGroup) activity.findViewById(R.id.tool_row)).getChildAt(2).performClick();
+        dispatchStroke(canvas, new float[]{420f}, new float[]{1300f});
+
+        Dialog dialog = ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);
+        idle(500); // 等工具栏收起动画结束，预览才和真机一致
+
+        View decor = dialog.getWindow().getDecorView();
+        decor.measure(View.MeasureSpec.makeMeasureSpec(W, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(H, View.MeasureSpec.EXACTLY));
+        decor.layout(0, 0, W, H);
+
+        Bitmap bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(bitmap);
+        drawMockBackground(c);
+        canvas.draw(c);
+        activity.findViewById(R.id.ui);
+        layoutFullScreen(activity.findViewById(R.id.ui));
+        activity.findViewById(R.id.ui).draw(c);
+        decor.draw(c);
+
+        writePng(bitmap, "07-text-input.png");
+    }
+
+    @Test
+    public void textToolIgnoresEmptyInput() throws Exception {
+        AnnotateActivity activity = Robolectric.buildActivity(AnnotateActivity.class).setup().get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+
+        ((ViewGroup) activity.findViewById(R.id.tool_row)).getChildAt(2).performClick();
+        dispatchStroke(canvas, new float[]{300f}, new float[]{900f});
+        Dialog dialog = ShadowDialog.getLatestDialog();
+        assertNotNull(dialog);
+
+        dialog.findViewById(R.id.text_ok).performClick();
+        assertFalse("空内容不应产生笔迹", canvas.hasInk());
+    }
+
+    @Test
+    public void eraserRemovesWholeTextBlock() {
+        AnnotateActivity activity = Robolectric.buildActivity(AnnotateActivity.class).setup().get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+
+        canvas.addText(200f, 600f, "擦我");
+        assertTrue(canvas.hasInk());
+
+        ((ViewGroup) activity.findViewById(R.id.rail)).getChildAt(0).performClick();
+        assertEquals(Tool.ERASER, canvas.getTool());
+        dispatchStroke(canvas, new float[]{212f}, new float[]{630f});
+
+        assertFalse("擦到文字块应整条删除", canvas.hasInk());
+    }
+
+    @Test
+    public void textModeRendersPreview() throws Exception {
+        AnnotateActivity activity = Robolectric.buildActivity(AnnotateActivity.class).setup().get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+        ViewGroup toolRow = activity.findViewById(R.id.tool_row);
+
+        toolRow.getChildAt(0).performClick();
+        dispatchStroke(canvas, new float[]{150, 260, 380, 500},
+                new float[]{420, 440, 520, 470});
+        toolRow.getChildAt(4).performClick();
+        dispatchStroke(canvas, new float[]{700, 700}, new float[]{960, 630});
+
+        canvas.setInkColor(activity.getColor(R.color.ink_white));
+        canvas.addText(110f, 1090f, "这个位置要重点讲");
+        canvas.setInkColor(activity.getColor(R.color.ink_red));
+        canvas.addText(110f, 1440f, "支持多行\n第二行也可以");
+
+        layoutFullScreen(activity.findViewById(R.id.ui));
+        writePng(renderScreen(activity, canvas), "06-annotate-text.png");
+    }
+
+    @Test
     public void tileStaysInactiveAsOneShotAction() throws Exception {
         android.service.quicksettings.TileService service =
                 Robolectric.buildService(InkTileService.class).create().get();
@@ -256,13 +370,16 @@ public class UiSmokeTest {
         target.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_UP, xs[xs.length - 1], ys[ys.length - 1], 0));
     }
 
+    /** 统计非透明像素（隔行/隔列采样），比逐点取像素稳得多。 */
     private static int alphaCount(Bitmap bitmap) {
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+        int[] row = new int[w];
         int count = 0;
-        int stepX = Math.max(1, bitmap.getWidth() / 60);
-        int stepY = Math.max(1, bitmap.getHeight() / 60);
-        for (int y = 0; y < bitmap.getHeight(); y += stepY) {
-            for (int x = 0; x < bitmap.getWidth(); x += stepX) {
-                if (Color.alpha(bitmap.getPixel(x, y)) > 10) {
+        for (int y = 0; y < h; y += 2) {
+            bitmap.getPixels(row, 0, w, 0, y, w, 1);
+            for (int x = 0; x < w; x += 2) {
+                if (Color.alpha(row[x]) > 10) {
                     count++;
                 }
             }

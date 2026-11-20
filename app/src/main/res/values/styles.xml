@@ -72,4 +72,18 @@
         <item name="android:includeFontPadding">false</item>
     </style>
 
+    <!-- 文字输入条：非浮动全屏窗口，键盘弹起时可 resize，输入条贴在键盘上方 -->
+    <style name="Theme.InkMark.Input" parent="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@style/Anim.InkMark.Popup</item>
+        <item name="android:windowSoftInputMode">adjustResize|stateAlwaysVisible</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:colorControlActivated">@color/accent</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
 </resources>

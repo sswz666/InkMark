@@ -16,6 +16,7 @@
     <string name="tool_rect">方框</string>
     <string name="tool_ellipse">圆形</string>
     <string name="tool_laser">激光</string>
+    <string name="tool_text">文字</string>
     <string name="tool_eraser">橡皮</string>
 
     <string name="width_thin">细</string>
@@ -32,6 +33,10 @@
     <string name="btn_clear">清空</string>
     <string name="btn_save">保存</string>
     <string name="btn_done">完成</string>
+    <string name="text_hint">输入文字…</string>
+    <string name="text_insert">插入文字</string>
+    <string name="text_cancel">取消输入</string>
+    <string name="text_empty">还没输入内容</string>
     <string name="btn_hide_tools">收起工具栏</string>
     <string name="btn_show_tools">展开工具栏</string>
 

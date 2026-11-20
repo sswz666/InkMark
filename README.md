@@ -23,7 +23,7 @@
 
 ## 功能
 
-- **8 种工具**：画笔（二次贝塞尔平滑）、荧光笔、直线、箭头、方框、圆形、激光笔（逐帧淡出）、橡皮（按笔画命中擦除）
+- **9 种工具**：画笔（二次贝塞尔平滑）、荧光笔、**文字**（点哪写哪，支持多行）、直线、箭头、方框、圆形、激光笔（逐帧淡出）、橡皮（按笔画/文字块命中擦除）
 - **7 色 × 3 档笔触**，主面板里选的默认值会带进标注层
 - **撤销 / 重做 / 清空**：快照式历史栈，40 步
 - **保存为透明 PNG**：`Pictures/墨点`，Android 10+ 走 MediaStore，低版本自动申请存储权限
@@ -35,9 +35,13 @@
 
 ## 截图
 
-| 主面板 | 标注层 | 收起工具栏 | 深色模式 |
-|---|---|---|---|
-| ![](docs/screenshots/01-main-card.png) | ![](docs/screenshots/02-annotate.png) | ![](docs/screenshots/04-annotate-clean.png) | ![](docs/screenshots/05-annotate-night.png) |
+| 主面板 | 标注层 | 文字标注 | 收起工具栏 | 深色模式 |
+|---|---|---|---|---|
+| ![](docs/screenshots/01-main-card.png) | ![](docs/screenshots/02-annotate.png) | ![](docs/screenshots/06-annotate-text.png) | ![](docs/screenshots/04-annotate-clean.png) | ![](docs/screenshots/05-annotate-night.png) |
+
+文字模式点一下画布，底部会升起输入条（键盘弹起时自动贴在其上方），确认后文字落成一条墨迹，可撤销、可擦除、可随图片一起导出：
+
+![文字输入条](docs/screenshots/07-text-input.png)
 
 ## 安装
 
@@ -55,7 +59,8 @@ adb install InkMark-1.1.apk
 1. 打开墨点，选好默认工具 / 颜色 / 笔触，点「开始标注」即可在**当前画面**上标注。
 2. 想标注任意应用：下拉控制中心 → 编辑磁贴 → 把「墨点」拖进快捷开关 → 在目标应用界面点一下磁贴。
 3. 标注中：左下角面板切工具，右侧操作列撤销 / 保存 / 完成；点左上角倒 V 收起工具栏。
-4. 「完成」退出标注层，回到原来的应用；一旦切出，涂鸦内容自动清空。
+4. 用「文字」工具点画布任意位置 → 底部输入条输入（支持换行）→ 点 ✓ 落字；字号跟随当前笔触档位，颜色跟随当前色。
+5. 「完成」退出标注层，回到原来的应用；一旦切出，涂鸦内容自动清空。
 
 ## 项目结构
 
@@ -63,7 +68,7 @@ adb install InkMark-1.1.apk
 app/src/main/java/com/inkmark/app/
 ├── MainActivity.java      主面板（浮动 Dialog 窗口）
 ├── AnnotateActivity.java  标注层（全屏透明窗口）+ 工具栏装配
-├── CanvasView.java        绘制引擎：笔迹、图形、激光、橡皮、导出
+├── CanvasView.java        绘制引擎：笔迹、图形、文字、激光、橡皮、导出
 ├── Ink.java / Tool.java   笔迹数据模型与工具定义
 ├── History.java           快照式撤销栈
 ├── Geom.java              几何命中（点到线段/矩形边界距离）
@@ -113,7 +118,7 @@ release 包默认用 debug 签名（仓库不含签名文件）。要用自己�
 ./gradlew testDebugUnitTest
 ```
 
-共 28 个用例，覆盖几何命中、撤销栈、窗口主题属性（`windowIsFloating` / `windowTranslucent` / 无 dim）、触摸绘制与撤销、工具栏收起/展开、切出即擦除、磁贴状态。渲染出的预览图在 `app/build/ui-preview/`。
+共 33 个用例，覆盖几何命中、撤销栈、窗口主题属性（`windowIsFloating` / `windowTranslucent` / 无 dim）、触摸绘制与撤销、工具栏收起/展开、切出即擦除、文字插入/空输入拦截/橡皮擦文字块、磁贴状态。渲染出的预览图在 `app/build/ui-preview/`。
 
 ## 已知限制
 
@@ -121,6 +126,7 @@ release 包默认用 debug 签名（仓库不含签名文件）。要用自己�
 - 从桌面图标进入时，标注层下面是桌面。要标注某个 App，请用控制中心磁贴入口。
 - 磁贴是一次性动作，不提供「关闭标注」能力，退出请在标注层点「完成」。
 - 「切出即擦除」是刻意的取舍：切到别的应用再回来，画布是空的，不能接着改上一张图。需要保留请先点保存导出 PNG。
+- 文字落笔后不能再编辑内容，只能整块擦掉重写（撤销可以逐步回退）。
 
 ## License
 

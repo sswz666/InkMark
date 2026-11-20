@@ -23,9 +23,15 @@ public class CanvasView extends View {
 
     public interface Listener {
         void onHistoryChanged(boolean canUndo, boolean canRedo);
+
+        /** 文字工具点了一下画布，请求弹出输入框。 */
+        void onTextRequested(float x, float y);
     }
 
     private static final float[] WIDTHS_DP = {2.5f, 5.5f, 10f};
+    /** 三档笔触对应的文字字号（dp）。 */
+    private static final float[] TEXT_SIZES_DP = {18f, 26f, 36f};
+    private static final float TEXT_LINE_SPACING = 1.26f;
     private static final long LASER_LIFE_MS = 680L;
 
     private final History<Ink> history = new History<>();
@@ -40,6 +46,8 @@ public class CanvasView extends View {
     private int widthLevel = 1;
     private float lastX;
     private float lastY;
+    private float textAnchorX;
+    private float textAnchorY;
     private boolean changedInGesture;
     private Listener listener;
 
@@ -106,6 +114,52 @@ public class CanvasView extends View {
 
     private float strokeWidth() {
         return dp(WIDTHS_DP[widthLevel]) * tool.widthFactor;
+    }
+
+    /** 当前档位对应的文字字号（px）。 */
+    private float textSize() {
+        return dp(TEXT_SIZES_DP[Math.max(0, Math.min(TEXT_SIZES_DP.length - 1, widthLevel))]);
+    }
+
+    /**
+     * 把一段文字落成一条墨迹：字号跟随当前笔触档位，颜色跟随当前色。
+     * 位置会自动收进画布内，避免点得太靠边被裁掉。
+     */
+    public void addText(float x, float y, String raw) {
+        if (raw == null) {
+            return;
+        }
+        String content = raw.replace("\r\n", "\n").replace('\r', '\n').trim();
+        if (content.isEmpty()) {
+            return;
+        }
+        float size = textSize();
+        paint.setStyle(Paint.Style.FILL);
+        paint.setTextSize(size);
+        paint.setTextAlign(Paint.Align.LEFT);
+
+        String[] lines = content.split("\n", -1);
+        float maxWidth = 0f;
+        for (String line : lines) {
+            maxWidth = Math.max(maxWidth, paint.measureText(line));
+        }
+        float boxHeight = size + (lines.length - 1) * size * TEXT_LINE_SPACING;
+
+        float margin = dp(4f);
+        if (getWidth() > 0) {
+            x = Math.max(margin, Math.min(x, getWidth() - maxWidth - margin));
+        }
+        if (getHeight() > 0) {
+            y = Math.max(margin, Math.min(y, getHeight() - boxHeight - margin));
+        }
+
+        history.snapshot();
+        Ink ink = Ink.text(inkColor, size, x, y, content);
+        ink.textWidth = maxWidth;
+        ink.textHeight = boxHeight;
+        history.state().add(ink);
+        notifyChanged();
+        invalidate();
     }
 
     public boolean hasInk() {
@@ -183,6 +237,12 @@ public class CanvasView extends View {
                 changedInGesture = false;
                 lastX = x;
                 lastY = y;
+                if (tool == Tool.TEXT) {
+                    // 文字只取落点，交给 Activity 弹输入框，确认后才写进历史
+                    textAnchorX = x;
+                    textAnchorY = y;
+                    return true;
+                }
                 if (tool == Tool.LASER) {
                     laser.clear();
                     addLaser(x, y);
@@ -205,6 +265,12 @@ public class CanvasView extends View {
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+                if (tool == Tool.TEXT) {
+                    if (event.getActionMasked() == MotionEvent.ACTION_UP && listener != null) {
+                        listener.onTextRequested(textAnchorX, textAnchorY);
+                    }
+                    return true;
+                }
                 finishGesture();
                 return true;
 
@@ -286,6 +352,12 @@ public class CanvasView extends View {
     }
 
     private boolean hit(Ink ink, float x, float y, float r) {
+        if (ink.isText()) {
+            // 文字整块都算命中，不用抠字形
+            rect.set(ink.sx() - r, ink.sy() - r,
+                    ink.sx() + ink.textWidth + r, ink.sy() + ink.textHeight + r);
+            return rect.contains(x, y);
+        }
         float tolerance = r + ink.width * 0.5f;
         switch (ink.tool) {
             case PEN:
@@ -380,8 +452,31 @@ public class CanvasView extends View {
                         Math.max(ink.sx(), ink.ex()), Math.max(ink.sy(), ink.ey()));
                 canvas.drawOval(rect, paint);
                 break;
+            case TEXT:
+                drawText(canvas, ink);
+                break;
             default:
                 break;
+        }
+    }
+
+    private void drawText(Canvas canvas, Ink ink) {
+        if (!ink.isText()) {
+            return;
+        }
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(ink.color);
+        paint.setAlpha(255);
+        paint.setTextSize(ink.textSize);
+        paint.setTextAlign(Paint.Align.LEFT);
+
+        float x = ink.sx();
+        float baseline = ink.sy() + ink.textSize;
+        float step = ink.textSize * TEXT_LINE_SPACING;
+        String[] lines = ink.text.split("\n", -1);
+        for (String line : lines) {
+            canvas.drawText(line, x, baseline, paint);
+            baseline += step;
         }
     }
 

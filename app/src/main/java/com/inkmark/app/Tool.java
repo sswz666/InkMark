@@ -5,6 +5,7 @@ public enum Tool {
 
     PEN("pen", R.string.tool_pen, R.drawable.ic_pen, 1.0f),
     MARKER("marker", R.string.tool_marker, R.drawable.ic_marker, 2.6f),
+    TEXT("text", R.string.tool_text, R.drawable.ic_text, 1.0f),
     LINE("line", R.string.tool_line, R.drawable.ic_line, 1.0f),
     ARROW("arrow", R.string.tool_arrow, R.drawable.ic_arrow, 1.0f),
     RECT("rect", R.string.tool_rect, R.drawable.ic_rect, 1.0f),
@@ -32,6 +33,11 @@ public enum Tool {
         return this == PEN || this == MARKER;
     }
 
+    /** 文字是"点一下 → 输入 → 落成一条笔迹"，不参与拖动绘制。 */
+    public boolean isText() {
+        return this == TEXT;
+    }
+
     public static Tool fromKey(String key) {
         if (key != null) {
             for (Tool t : values()) {
@@ -45,11 +51,11 @@ public enum Tool {
 
     /** 主面板里展示的顺序。 */
     public static final Tool[] ORDER = {
-            PEN, MARKER, ARROW, RECT, ELLIPSE, LINE, LASER, ERASER
+            PEN, MARKER, TEXT, ARROW, RECT, ELLIPSE, LINE, LASER, ERASER
     };
 
-    /** 标注工具条里的顺序（7 个，橡皮放在右侧操作列）。 */
+    /** 标注工具条里的顺序（8 个，橡皮放在右侧操作列）。 */
     public static final Tool[] BAR_ORDER = {
-            PEN, MARKER, LINE, ARROW, RECT, ELLIPSE, LASER
+            PEN, MARKER, TEXT, LINE, ARROW, RECT, ELLIPSE, LASER
     };
 }
