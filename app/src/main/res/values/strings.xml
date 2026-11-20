@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">墨点</string>
+    <string name="tile_label">墨点</string>
+    <string name="app_sub">屏幕标注 · 透明浮层</string>
+    <string name="btn_start">开始标注</string>
+
+    <string name="label_tools">常用工具</string>
+    <string name="label_color">颜色</string>
+    <string name="label_width">笔触</string>
+
+    <string name="tool_pen">画笔</string>
+    <string name="tool_marker">荧光笔</string>
+    <string name="tool_line">直线</string>
+    <string name="tool_arrow">箭头</string>
+    <string name="tool_rect">方框</string>
+    <string name="tool_ellipse">圆形</string>
+    <string name="tool_laser">激光</string>
+    <string name="tool_eraser">橡皮</string>
+
+    <string name="width_thin">细</string>
+    <string name="width_mid">中</string>
+    <string name="width_bold">粗</string>
+
+    <string name="pref_hide">标注时隐藏最近任务</string>
+    <string name="hint_tile">在控制中心添加「墨点」磁贴，可在任意应用上方直接标注。标注中点左上角的收起按钮，可隐藏工具栏而画面与笔迹保持原样。</string>
+    <string name="hint_perm">无需无障碍 / 悬浮窗权限</string>
+    <string name="tag_ready">就绪</string>
+
+    <string name="chip_annotating">标注中</string>
+    <string name="btn_undo">撤销</string>
+    <string name="btn_redo">重做</string>
+    <string name="btn_clear">清空</string>
+    <string name="btn_save">保存</string>
+    <string name="btn_done">完成</string>
+    <string name="btn_hide_tools">收起工具栏</string>
+    <string name="btn_show_tools">展开工具栏</string>
+
+    <string name="toast_saved">已保存到相册 Pictures/墨点</string>
+    <string name="toast_cleared">画布已清空</string>
+    <string name="toast_save_fail">保存失败，请检查存储权限</string>
+    <string name="toast_perm_needed">需要存储权限才能保存</string>
+
+    <string name="desc_logo">墨点</string>
+    <string name="desc_canvas">标注画布</string>
+    <string name="desc_more">更多</string>
+
+    <string name="about_hint">标注层浮在当前画面之上，界面外完全透明；标注结束后原样返回下层应用。</string>
+</resources>

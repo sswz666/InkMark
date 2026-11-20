@@ -1,0 +1,64 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 签名文件不随开源代码提供：仓库里没有 inkmark.jks 时，release 自动退回 debug 签名，
+// 保证任何人 clone 下来都能直接 assembleRelease。
+def keystoreFile = rootProject.file("inkmark.jks")
+def hasKeystore = keystoreFile.exists()
+
+android {
+    namespace 'com.inkmark.app'
+    compileSdk 35
+    buildToolsVersion "35.0.0"
+
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile keystoreFile
+                storePassword project.findProperty("INKMARK_STORE_PASS") ?: ""
+                keyAlias project.findProperty("INKMARK_KEY_ALIAS") ?: "inkmark"
+                keyPassword project.findProperty("INKMARK_KEY_PASS") ?: ""
+            }
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.inkmark.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 2
+        versionName "1.1"
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ""
+        }
+        release {
+            signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}
