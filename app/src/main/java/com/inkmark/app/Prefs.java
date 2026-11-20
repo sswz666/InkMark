@@ -9,7 +9,6 @@ public final class Prefs {
     private static final String KEY_TOOL = "tool";
     private static final String KEY_COLOR = "color";
     private static final String KEY_WIDTH = "width";
-    private static final String KEY_HIDE = "hide_recents";
 
     private Prefs() {
     }
@@ -40,14 +39,6 @@ public final class Prefs {
 
     public static void setWidthLevel(Context context, int level) {
         sp(context).edit().putInt(KEY_WIDTH, level).apply();
-    }
-
-    public static boolean hideRecents(Context context) {
-        return sp(context).getBoolean(KEY_HIDE, true);
-    }
-
-    public static void setHideRecents(Context context, boolean hide) {
-        sp(context).edit().putBoolean(KEY_HIDE, hide).apply();
     }
 
     /** 调色板：墨黑 / 白 / 蓝紫 / 青 / 橙 / 红 / 黄。 */

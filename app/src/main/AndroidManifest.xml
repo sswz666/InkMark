@@ -15,9 +15,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.InkMark.Card">
 
-        <!-- 主面板：系统 Dialog 主题的浮动 Activity（界面外透明，可直接看到下层） -->
+        <!-- 主面板：系统 Dialog 主题的浮动 Activity（界面外透明，可直接看到下层）；不进最近任务 -->
         <activity
             android:name=".MainActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
@@ -28,10 +29,11 @@
             </intent-filter>
         </activity>
 
-        <!-- 标注层：全屏半透明 Activity，运行时决定是否进入最近任务 -->
+        <!-- 标注层：全屏半透明 Activity，不进最近任务（后台不留痕） -->
         <activity
             android:name=".AnnotateActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
             android:taskAffinity="com.inkmark.app.annotate"

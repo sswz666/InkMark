@@ -22,7 +22,6 @@
     <string name="width_mid">中</string>
     <string name="width_bold">粗</string>
 
-    <string name="pref_hide">标注时隐藏最近任务</string>
     <string name="hint_tile">在控制中心添加「墨点」磁贴，可在任意应用上方直接标注。标注中点左上角的收起按钮，可隐藏工具栏而画面与笔迹保持原样。</string>
     <string name="hint_perm">无需无障碍 / 悬浮窗权限</string>
     <string name="tag_ready">就绪</string>

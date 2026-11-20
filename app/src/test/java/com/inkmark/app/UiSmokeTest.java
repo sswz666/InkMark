@@ -187,6 +187,33 @@ public class UiSmokeTest {
     }
 
     @Test
+    public void leavingAnnotateWipesInkAndHistory() throws Exception {
+        ActivityController<AnnotateActivity> controller =
+                Robolectric.buildActivity(AnnotateActivity.class).setup();
+        AnnotateActivity activity = controller.get();
+        CanvasView canvas = activity.findViewById(R.id.canvas);
+        layoutFullScreen(canvas);
+
+        dispatchStroke(canvas, new float[]{200, 320, 460, 600},
+                new float[]{700, 720, 820, 760});
+        assertTrue("先要有笔迹", canvas.hasInk());
+
+        // 切出应用（回桌面 / 切换应用 / 点完成都会走 pause + stop）
+        controller.pause().stop();
+
+        assertFalse("切出后笔迹必须清空", canvas.hasInk());
+        assertFalse("撤销历史也要清掉，不能撤回", canvas.undo());
+        assertFalse(canvas.redo());
+
+        // 再回来时是一张干净画布，且仍能正常书写
+        controller.start().resume();
+        layoutFullScreen(canvas);
+        dispatchStroke(canvas, new float[]{240, 360, 480},
+                new float[]{900, 940, 1000});
+        assertTrue("回来后应能继续书写", canvas.hasInk());
+    }
+
+    @Test
     public void tileStaysInactiveAsOneShotAction() throws Exception {
         android.service.quicksettings.TileService service =
                 Robolectric.buildService(InkTileService.class).create().get();

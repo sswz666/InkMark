@@ -10,11 +10,9 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 主面板：和 ShizukuRunner 一样，用系统 Dialog 主题做成一张浮起来的卡片，
@@ -46,7 +44,7 @@ public class MainActivity extends Activity {
         setFinishOnTouchOutside(true);
 
         sizeWindow();
-        applyHideFromRecents(Prefs.hideRecents(this));
+        ensureHiddenFromRecents();
 
         buildToolGrid();
         buildColors();
@@ -163,13 +161,6 @@ public class MainActivity extends Activity {
 
     private void bindActions() {
         findViewById(R.id.btn_start).setOnClickListener(v -> startAnnotating());
-
-        Switch hide = findViewById(R.id.sw_hide);
-        hide.setChecked(Prefs.hideRecents(this));
-        hide.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            Prefs.setHideRecents(this, isChecked);
-            applyHideFromRecents(isChecked);
-        });
     }
 
     private void startAnnotating() {
@@ -184,14 +175,14 @@ public class MainActivity extends Activity {
         overridePendingTransition(0, 0);
     }
 
-    private void applyHideFromRecents(boolean hide) {
+    /** 双保险：即便某些 ROM 忽略清单里的 excludeFromRecents，也把本应用任务移出多任务列表。 */
+    private void ensureHiddenFromRecents() {
         try {
             ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-            List<ActivityManager.AppTask> tasks = am.getAppTasks();
-            if (tasks != null && !tasks.isEmpty()) {
-                tasks.get(0).setExcludeFromRecents(hide);
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                task.setExcludeFromRecents(true);
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
     }
 

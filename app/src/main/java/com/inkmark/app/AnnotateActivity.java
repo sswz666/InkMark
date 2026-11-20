@@ -22,7 +22,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 标注层：全屏半透明的 Activity，界面外完全透明，下层应用清晰可见。
@@ -31,6 +30,9 @@ import java.util.List;
 public class AnnotateActivity extends Activity implements CanvasView.Listener {
 
     private static final int REQ_STORAGE = 7;
+
+    /** 系统权限弹窗期间 Activity 可能被 stop，此时不能清空画布。 */
+    private boolean awaitingPermission;
 
     private CanvasView canvas;
     private TextView chipText;
@@ -84,7 +86,18 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
         applyInsets();
         updateChip();
         updateHistoryButtons(false, false);
-        applyHideFromRecents(Prefs.hideRecents(this));
+        ensureHiddenFromRecents();
+    }
+
+    /** 双保险：即便某些 ROM 忽略清单里的 excludeFromRecents，也把本应用任务移出多任务列表。 */
+    private void ensureHiddenFromRecents() {
+        try {
+            ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            for (ActivityManager.AppTask task : am.getAppTasks()) {
+                task.setExcludeFromRecents(true);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     // ================= 收起 / 展开工具栏 =================
@@ -419,6 +432,7 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
                 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
+            awaitingPermission = true;
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE);
             return;
         }
@@ -439,6 +453,7 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_STORAGE) {
+            awaitingPermission = false;
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 doSave();
             } else {
@@ -449,14 +464,25 @@ public class AnnotateActivity extends Activity implements CanvasView.Listener {
 
     // ================= 生命周期 =================
 
-    private void applyHideFromRecents(boolean hide) {
-        try {
-            ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
-            List<ActivityManager.AppTask> tasks = am.getAppTasks();
-            if (tasks != null && !tasks.isEmpty()) {
-                tasks.get(0).setExcludeFromRecents(hide);
-            }
-        } catch (Exception ignored) {
+    /**
+     * 切出即擦除：回到桌面、切换应用、点「完成」都会走到 onStop，
+     * 此时把笔迹连同撤销历史一起丢弃，下次进入是一张干净的画布。
+     */
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (awaitingPermission) {
+            // 正在等系统权限弹窗（保存图片），回来还要继续画，不能清
+            return;
         }
+        wipeInk();
+    }
+
+    private void wipeInk() {
+        if (canvas == null) {
+            return;
+        }
+        canvas.wipe();
+        updateHistoryButtons(false, false);
     }
 }

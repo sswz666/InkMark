@@ -193,35 +193,11 @@
                 android:layout_marginTop="16dp"
                 android:background="@color/stroke" />
 
-            <!-- ===== 隐藏最近任务 ===== -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:includeFontPadding="false"
-                    android:text="@string/pref_hide"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-
-                <Switch
-                    android:id="@+id/sw_hide"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp" />
-            </LinearLayout>
-
             <!-- ===== 磁贴提示 ===== -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:gravity="top"
                 android:orientation="horizontal">
 

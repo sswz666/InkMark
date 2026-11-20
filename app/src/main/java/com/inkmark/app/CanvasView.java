@@ -141,6 +141,13 @@ public class CanvasView extends View {
         invalidate();
     }
 
+    /** 彻底丢弃全部笔迹与撤销历史，用于"切出即擦除"。 */
+    public void wipe() {
+        history.clear();
+        laser.clear();
+        invalidate();
+    }
+
     /** 导出透明背景的标注图层。 */
     public Bitmap exportBitmap() {
         int w = getWidth();
